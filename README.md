@@ -7,7 +7,7 @@
 
 # End Goal
 
-* Align the data points at 30 minute intervals. For environmental values this is pure sampling, For utility data this is summing.
+* Align the data points at 10 minute intervals. For environmental values this is pure sampling, For utility data this is summing.
 * Go back 60 days from last day
 * Eliminate the boolean values
 * Apply the heuristic for the empty values (if needed)
