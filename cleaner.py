@@ -27,6 +27,16 @@ o   Security
 o   These points lists are idiosyncratic and there could be some other abbreviations possible but these are all we could think of so far.
 """
 
+def _interpolate(points, point_type, name, interval):
+    """
+    @param points: list(int)
+    @param point_type: str
+    @param name: str
+    @param interval: int
+    @return: list(int)
+    """
+    raise NotImplementedError
+
 def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
             help='Full path to the file containing the csv',
@@ -44,6 +54,9 @@ def main():
             )
     define('display_points', type=bool,
             help='display the list of points in the data',
+            )
+    define('prediction_point',
+            default='Total Real Power',
             )
 
     parse_command_line()
