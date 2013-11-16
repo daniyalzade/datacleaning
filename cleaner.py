@@ -131,6 +131,7 @@ def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
             help='Full path to the file containing the csv',
             )
+    define('output', default='output.csv')
     define('last_day', default='2013-10-26',
             help='The last day to be used for the analysis',
             )
@@ -167,6 +168,23 @@ def main():
         if idx / 3 >= options.limit:
             break
     print "number of points for analysis %s" % len(points)
+
+    names = [p['name'] for p in points]
+    if options.display_points:
+        import pprint
+        pprint.pprint(names)
+        return
+
+    header = ','.join(['date'] + names)
+    num_values = len(points[0][0])
+    print header
+    for idx in range(num_values):
+        ts = point[0][1][idx]
+        row = [ts]
+        for point in points:
+            row.append(point[0][2][idx])
+        msg = ','.join([str(r) for r in row])
+        print msg
 
 if __name__ == "__main__":
     from cmdline import define
