@@ -44,6 +44,12 @@ EXC_NAMES = [
         'Security',
         ]
 
+class ShouldIngore(Exception):
+    pass
+
+class NoPointFound(Exception):
+    pass
+
 def _exclude_name(name):
     """
     @param name: str
@@ -65,7 +71,9 @@ def _truncate(point, start, end):
     """
     dict_, dates, values = point
     date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
-    truncated_date, truncated_values = zip(*date_and_values)
+    if not date_and_values:
+        raise NoPointFound
+    truncated_date, truncated_values = map(list, zip(*date_and_values))
     return dict_, truncated_date, truncated_values
 
 def _interpolate(point):
@@ -96,14 +104,24 @@ def _get_frequency(frequency):
     @return: int
 
     0:01:00 -> 1
-    0:05:00 > 5
+    0:05:00 -> 5
     """
     return int(frequency.split(':')[1])
 
 def _get_header_dates_and_values(lines):
-    headers, dates, values = map(lambda x: re.split(r'\s*,\s*', x), lines)
+    """
+    @param lines: list(str)
+    @return: (dict(headers), list(datetime), list(float))
+    """
+    headers, dates, values = map(lambda x: re.split(r'(?:\s*,\s*|\n)', x)[:-1],
+                                 lines)
+    try:
+        values = map(float, values)
+    except Exception:
+        if options.debug:
+            print ("wrong type: %s" % values[0])
+        raise ShouldIngore
     dates = map(_convert_datetime, dates)
-    values = map(float, values)
     return headers, dates, values
 
 def _parse_point(lines, start=None, end=None):
@@ -154,8 +172,6 @@ def _should_ignore(point, exclude):
     if not point[0]['frequency'] in [5, 10, 15]:
         if options.debug: print ("ignoring due to frequency %s" % frequency)
         return True
-    #if not any(map(lambda v: v in EXC_VALUES, point[2])):
-    #    return True
     return False
 
 def main():
@@ -201,7 +217,10 @@ def main():
             break
         lines.append(line)
         if len(lines) == 3:
-            point = _parse_point(lines)
+            try:
+                point = _parse_point(lines)
+            except ShouldIngore:
+                continue
             lines = []
             if _should_ignore(point, options.exclude):
                 continue
@@ -223,19 +242,23 @@ def main():
         end = max([p[0]['end'] for p in points])
         print "data recorded from %s to %s" % (start, end)
         return
-
-    points = [_truncate(p, start, end) for p in points]
-    #points = [_interpolate(p, start, end) for p in points]
+    try:
+        points = [_truncate(p, start, end) for p in points]
+        #points = [_interpolate(p, start, end) for p in points]
+    except NoPointFound:
+        if options.debug:
+            print "No points found, try increase --lookback={int}"
+        return
     print "point %s" % points
 
     header = ','.join(['date'] + names)
     num_values = len(points[0][0])
     print header
     for idx in range(num_values):
-        ts = point[0][1][idx]
+        ts = points[0][1][idx]
         row = [ts]
         for point in points:
-            row.append(point[0][2][idx])
+            row.append(points[0][2][idx])
         msg = ','.join([str(r) for r in row])
         print msg
 
