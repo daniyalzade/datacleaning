@@ -17,18 +17,35 @@ EXC_VALUES = [
         'No',
         ]
 
-"""
-Remove the names matching:
+EXC_NAMES = [
+        # Set point or possible variants: STPT, ST
+        'Set Point',
+        'STPT',
+        'ST',
+        # Alarm or possible variants:  ALM, ALRM
+        'ALM',
+        'ALRM',
+        'Alarm',
+        # Command or CMD
+        'Command',
+        'CMD',
+        # Control Temp or CONT
+        'CONT',
+        'Control Temp',
+        'Fire',
+        'Smoke',
+        'Security',
+        ]
 
-o   Set point or possible variants: STPT, ST
-o   Alarm or possible variants:  ALM, ALRM
-o   Command or CMD
-o   Control Temp or CONT
-o   Fire
-o   Smoke
-o   Security
-o   These points lists are idiosyncratic and there could be some other abbreviations possible but these are all we could think of so far.
-"""
+def _exclude_name(name):
+    """
+    @param name: str
+    @return: bool
+    """
+    for exc in EXC_NAMES:
+        if exc.lower() in name:
+            return True
+    return False
 
 def _interpolate(points, point_type, name, interval):
     """
@@ -40,12 +57,39 @@ def _interpolate(points, point_type, name, interval):
     """
     raise NotImplementedError
 
-def _parse_point(lines):
+def _parse_point(lines, start=None, end=None):
     """
     @param lines: list(str)
+    @param start: datetime
+    @param end: datetime
     @return: (dict, list(datetime), list(float))
+
+    {
+    'name': str,
+    'point_type': str,
+    'start': datetime,
+    'end': datetime,
+    'frequency': int,
+    'url': str,
+    }
     """
     print lines
+
+def _should_ignore(point, exclude):
+    """
+    @param point: (dict, list, list)
+    @param exclude: list(str)
+    @return: bool
+    """
+    if _exclude_name(point[0]['name']):
+        return True
+    if point[0]['point_type'] in exclude:
+        return True
+    if not point[0]['frequency'] in [5, 10, 15]:
+        return True
+    if not any(map(lambda v: v in EXC_VALUES), point[2]):
+        return True
+    return False
 
 def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
@@ -74,14 +118,19 @@ def main():
 
     foo = open(options.path)
     lines = []
+    points = []
     for idx, line in enumerate(foo.readlines()):
         if len(lines) == 3:
-            _parse_point(lines)
+            point = _parse_point(lines)
+            if _should_ignore(point):
+                continue
             lines = []
+            points.append(point)
         else:
             lines.append(line)
         if idx / 3 >= options.limit:
             break
+    print "number of points for analysis %s" % len(points)
 
 if __name__ == "__main__":
     from cmdline import define
