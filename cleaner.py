@@ -7,6 +7,7 @@ DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
 SAMPLE_DATE = '2013-10-19 04:11:00'
 SAMPLE_HEADERS = '%24301_points_High_History/,{http://obix.org/ns/schema/1.0}real,2013-10-19 03:21:00,2013-10-25 03:21:00,8640,0:01:00,http://Callida:Callida123@38.100.73.133/obix/histories/Pennzoil_WebSup/%24301_points_High_History/~historyQuery?start=2013-01-01T00:00:00.000-23:59&end=2013-10-25T08:21:47.565-23:59'
+OPITIMAL_FREQUENCY = 10
 
 TYPES = [
         'bool',
@@ -76,7 +77,7 @@ def _truncate(point, start, end):
     truncated_date, truncated_values = map(list, zip(*date_and_values))
     return dict_, truncated_date, truncated_values
 
-def _interpolate(point):
+def _interpolate(*point):
     """
     At this point, we assume that all the point has been truncated to the
     proper start / end times.
@@ -84,7 +85,28 @@ def _interpolate(point):
     @param point: (dict, list, list)
     @return: Point
     """
-    raise NotImplementedError
+    dict_, dates, values = point
+    frequency = dict_.get('frequency')
+    if frequency == 10:
+        return point
+    if frequency == 5:
+        return dict_, dates[0::2], values[0::2]
+    elif frequency == 15:
+        #0,   15,   30,  45, (timestamps we have)
+        #  10,   20,  40,    (timesamps to predict)
+        import pdb; pdb.set_trace()
+        new_dates, new_values = dates[0], values[0]
+        x = [1/3., 2/3.]
+        for idx, (date, value) in enumerate(zip(dates, values)[1:], 1):
+            is_even = idx % 2 == 0
+            if is_even:
+                new_dates.append(date)
+                new_values.append(value)
+            previous_value = new_values[idx-1]
+            predicted_value = (previous_value * x[is_even] + value * x[is_even-1])/2.
+            new_dates.append(date - timedelta(minutes=10))
+            new_values.append(predicted_value)
+        return dict_, new_dates, new_values
 
 def _convert_datetime(date_str):
     try:
@@ -104,7 +126,6 @@ def _get_frequency(frequency):
     @return: int
 
     0:01:00 -> 1
-    0:05:00 -> 5
     """
     return int(frequency.split(':')[1])
 
@@ -131,7 +152,7 @@ def _parse_point(lines, start=None, end=None):
     @param end: datetime
     @return: (dict, list(datetime), list(float))
 
-   {
+    {
     'name': str,
     'point_type': str,
     'start': datetime,
@@ -245,17 +266,22 @@ def main():
         return
     try:
         points = [_truncate(p, start, end) for p in points]
-        #points = [_interpolate(p, start, end) for p in points]
+        points = [_interpolate(p, start, end) for p in points]
     except NoPointFound:
         if options.debug:
             print "No points found, try increase --lookback={int}"
         return
-    print "point %s" % points
     header = ','.join(['date'] + names)
-    print header, '\n'
-    for pair in points:
-        for p in zip(*pair[1:]):
-            print ','.join(map(str, p)), '\n'
+    num_values = len(points[0][0])
+    print header
+    for idx in range(num_values):
+        ts = points[0][1][idx]
+        row = [ts]
+        for point in points:
+            row.append(point[0][2][idx])
+        msg = ','.join([str(r) for r in row])
+        print msg
+
 
 if __name__ == "__main__":
     from cmdline import define
