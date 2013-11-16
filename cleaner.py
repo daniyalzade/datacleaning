@@ -1,6 +1,8 @@
-import datetime
+from datetime import datetime
+from datetime import timedelta
 
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
+DATE_FORMAT = '%Y-%m-%d'
 SAMPLE_DATE = '2013-10-19 04:11:00'
 SAMPLE_HEADERS = '%24301_points_High_History/,{http://obix.org/ns/schema/1.0}real,2013-10-19 03:21:00,2013-10-25 03:21:00,8640,0:01:00,http://Callida:Callida123@38.100.73.133/obix/histories/Pennzoil_WebSup/%24301_points_High_History/~historyQuery?start=2013-01-01T00:00:00.000-23:59&end=2013-10-25T08:21:47.565-23:59'
 
@@ -50,18 +52,29 @@ def _exclude_name(name):
             return True
     return False
 
-def _interpolate(points, point_type, name, interval):
+def _truncate(point, start, end):
     """
-    @param points: list(int)
-    @param point_type: str
-    @param name: str
-    @param interval: int
-    @return: list(int)
+    @param point: Point
+    @param start: datetime
+    @param end: datetime
+    """
+    return point
+
+def _interpolate(point):
+    """
+    At this point, we assume that all the point has been truncated to the
+    proper start / end times.
+
+    @param point: (dict, list, list)
+    @return: Point
     """
     raise NotImplementedError
 
 def _convert_datetime(date_str):
-    return datetime.datetime.striptime(date_str, DATE_TIME_FORMAT)
+    try:
+        return datetime.strptime(date_str, DATE_TIME_FORMAT)
+    except Exception:
+        return datetime.strptime(date_str, DATE_FORMAT)
 
 def _get_point_type(point_type):
     for type in TYPES:
@@ -132,7 +145,7 @@ def main():
             help='Full path to the file containing the csv',
             )
     define('output', default='output.csv')
-    define('last_day', default='2013-10-26',
+    define('end', default='2013-10-26',
             help='The last day to be used for the analysis',
             )
     define('lookback', default=60, type=int,
@@ -146,12 +159,20 @@ def main():
     define('display_points', type=bool,
             help='display the list of points in the data',
             )
+    define('display_point', type=str,
+            help='display data about this particular point',
+            )
+    define('display_date_range', type=bool,
+            help='display the first and last values recorded',
+            )
     define('prediction_point',
             default='Total Real Power',
             )
     define('limit', type=int)
 
     parse_command_line()
+    end = _convert_datetime(options.end)
+    start = end - timedelta(days=options.lookback)
 
     foo = open(options.path)
     lines = []
@@ -170,10 +191,23 @@ def main():
     print "number of points for analysis %s" % len(points)
 
     names = [p['name'] for p in points]
+    if options.display_point:
+        for p in points:
+            if p[0]['name'] == options.display_point:
+                print p[0]
+        return
     if options.display_points:
         import pprint
         pprint.pprint(names)
         return
+    if options.display_date_range:
+        start = min([p[0]['start'] for p in points])
+        end = max([p[0]['end'] for p in points])
+        print "data recorded from %s to %s" % (start, end)
+        return
+
+    points = [_truncate(p, start, end) for p in points]
+    points = [_interpolate(p, start, end) for p in points]
 
     header = ','.join(['date'] + names)
     num_values = len(points[0][0])
