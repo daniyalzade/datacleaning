@@ -77,7 +77,7 @@ def _truncate(point, start, end):
     truncated_date, truncated_values = map(list, zip(*date_and_values))
     return dict_, truncated_date, truncated_values
 
-def _interpolate(*point):
+def _interpolate(point):
     """
     At this point, we assume that all the point has been truncated to the
     proper start / end times.
@@ -94,7 +94,6 @@ def _interpolate(*point):
     elif frequency == 15:
         #0,   15,   30,  45, (timestamps we have)
         #  10,   20,  40,    (timesamps to predict)
-        import pdb; pdb.set_trace()
         new_dates, new_values = dates[0], values[0]
         x = [1/3., 2/3.]
         for idx, (date, value) in enumerate(zip(dates, values)[1:], 1):
@@ -265,8 +264,9 @@ def main():
         print "data recorded from %s to %s" % (start, end)
         return
     try:
+        import pdb; pdb.set_trace()
         points = [_truncate(p, start, end) for p in points]
-        points = [_interpolate(p, start, end) for p in points]
+        points = [_interpolate(p) for p in points]
     except NoPointFound:
         if options.debug:
             print "No points found, try increase --lookback={int}"
