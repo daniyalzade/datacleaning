@@ -57,8 +57,14 @@ def _truncate(point, start, end):
     @param point: Point
     @param start: datetime
     @param end: datetime
+    @return: Point
+
+    return all the dates and values in between start, end
     """
-    return point
+    dict_, dates, values = point
+    date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
+    truncated_date, truncated_values = zip(*date_and_values)
+    return dict_, truncated_date, truncated_values
 
 def _interpolate(point):
     """
