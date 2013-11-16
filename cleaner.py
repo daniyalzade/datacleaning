@@ -1,3 +1,6 @@
+import datetime
+
+DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 SAMPLE_DATE = '2013-10-19 04:11:00'
 SAMPLE_HEADERS = '%24301_points_High_History/,{http://obix.org/ns/schema/1.0}real,2013-10-19 03:21:00,2013-10-25 03:21:00,8640,0:01:00,http://Callida:Callida123@38.100.73.133/obix/histories/Pennzoil_WebSup/%24301_points_High_History/~historyQuery?start=2013-01-01T00:00:00.000-23:59&end=2013-10-25T08:21:47.565-23:59'
 
@@ -57,6 +60,9 @@ def _interpolate(points, point_type, name, interval):
     """
     raise NotImplementedError
 
+def _convert_datetime(date_str):
+    return datetime.datetime.striptime(date_str, DATE_TIME_FORMAT)
+
 def _parse_point(lines, start=None, end=None):
     """
     @param lines: list(str)
@@ -64,7 +70,7 @@ def _parse_point(lines, start=None, end=None):
     @param end: datetime
     @return: (dict, list(datetime), list(float))
 
-    {
+   {
     'name': str,
     'point_type': str,
     'start': datetime,
@@ -73,7 +79,18 @@ def _parse_point(lines, start=None, end=None):
     'url': str,
     }
     """
-    print lines
+
+    first_line, dates, values = lines
+    name, point_type, start_date, end_date, _, frequency, url = first_line
+    dict_ = {
+            'name': name,
+            'point_type': point_type,
+            'start': _convert_datetime(start_date),
+            'end': _convert_datetime(end_date),
+            'frequency': frequency,
+            'url': url,
+    }
+    return (dict_, dates, values)
 
 def _should_ignore(point, exclude):
     """
