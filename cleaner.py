@@ -119,7 +119,7 @@ def _get_header_dates_and_values(lines):
         values = map(float, values)
     except Exception:
         if options.debug:
-            print ("wrong type: %s" % values[0])
+            print ("ingoring due to wrong type: %s" % values[0])
         raise ShouldIngore
     dates = map(_convert_datetime, dates)
     return headers, dates, values
@@ -209,10 +209,10 @@ def main():
     end = _convert_datetime(options.end)
     start = end - timedelta(days=options.lookback)
 
-    foo = open(options.path)
+    file_to_read = open(options.path)
     lines = []
     points = []
-    for idx, line in enumerate(foo.readlines()):
+    for idx, line in enumerate(file_to_read.readlines()):
         if idx / 3 >= options.limit:
             break
         lines.append(line)
@@ -221,7 +221,8 @@ def main():
                 point = _parse_point(lines)
             except ShouldIngore:
                 continue
-            lines = []
+            finally:
+                lines = []
             if _should_ignore(point, options.exclude):
                 continue
             points.append(point)
@@ -250,17 +251,11 @@ def main():
             print "No points found, try increase --lookback={int}"
         return
     print "point %s" % points
-
     header = ','.join(['date'] + names)
-    num_values = len(points[0][0])
-    print header
-    for idx in range(num_values):
-        ts = points[0][1][idx]
-        row = [ts]
-        for point in points:
-            row.append(points[0][2][idx])
-        msg = ','.join([str(r) for r in row])
-        print msg
+    print header, '\n'
+    for pair in points:
+        for p in zip(*pair[1:]):
+            print ','.join(map(str, p)), '\n'
 
 if __name__ == "__main__":
     from cmdline import define
