@@ -264,7 +264,6 @@ def main():
         print "data recorded from %s to %s" % (start, end)
         return
     try:
-        import pdb; pdb.set_trace()
         points = [_truncate(p, start, end) for p in points]
         points = [_interpolate(p) for p in points]
     except NoPointFound:
@@ -278,7 +277,7 @@ def main():
         ts = points[0][1][idx]
         row = [ts]
         for point in points:
-            row.append(point[0][2][idx])
+            row.append(points[0][2][idx])
         msg = ','.join([str(r) for r in row])
         print msg
 
