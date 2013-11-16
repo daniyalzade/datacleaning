@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from datetime import timedelta
 import logging
@@ -99,6 +100,12 @@ def _get_frequency(frequency):
     """
     return int(frequency.split(':')[1])
 
+def _get_header_dates_and_values(lines):
+    headers, dates, values = map(lambda x: re.split(r'\s*,\s*', x), lines)
+    dates = map(_convert_datetime, dates)
+    values = map(float, values)
+    return headers, dates, values
+
 def _parse_point(lines, start=None, end=None):
     """
     @param lines: list(str)
@@ -115,10 +122,8 @@ def _parse_point(lines, start=None, end=None):
     'url': str,
     }
     """
-
-    first_line, dates, values = lines
-    first_line = map(lambda x:x.strip(), first_line.split(','))
-    name, point_type, start_date, end_date, _, frequency, url = first_line
+    header, dates, values = _get_header_dates_and_values(lines)
+    name, point_type, start_date, end_date, _, frequency, url = header
     point_type = _get_point_type(point_type)
     frequency = _get_frequency(frequency)
     dict_ = {
@@ -149,8 +154,8 @@ def _should_ignore(point, exclude):
     if not point[0]['frequency'] in [5, 10, 15]:
         if options.debug: print ("ignoring due to frequency %s" % frequency)
         return True
-    if not any(map(lambda v: v in EXC_VALUES, point[2])):
-        return True
+    #if not any(map(lambda v: v in EXC_VALUES, point[2])):
+    #    return True
     return False
 
 def main():
@@ -203,7 +208,7 @@ def main():
             points.append(point)
     print "number of points for analysis %s" % len(points)
 
-    names = [p['name'] for p in points]
+    names = [p[0]['name'] for p in points]
     if options.display_point:
         for p in points:
             if p[0]['name'] == options.display_point:
@@ -220,7 +225,8 @@ def main():
         return
 
     points = [_truncate(p, start, end) for p in points]
-    points = [_interpolate(p, start, end) for p in points]
+    #points = [_interpolate(p, start, end) for p in points]
+    print "point %s" % points
 
     header = ','.join(['date'] + names)
     num_values = len(points[0][0])
