@@ -40,6 +40,13 @@ def _interpolate(points, point_type, name, interval):
     """
     raise NotImplementedError
 
+def _parse_point(lines):
+    """
+    @param lines: list(str)
+    @return: (dict, list(datetime), list(float))
+    """
+    print lines
+
 def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
             help='Full path to the file containing the csv',
@@ -61,17 +68,19 @@ def main():
     define('prediction_point',
             default='Total Real Power',
             )
+    define('limit', type=int)
 
     parse_command_line()
 
     foo = open(options.path)
+    lines = []
     for idx, line in enumerate(foo.readlines()):
-        if 'NT_DD_East_10_06_CD' in line:
-            print line
-
-        if not idx % 3 - 2:
-            print line
-        if idx > 1000:
+        if len(lines) == 3:
+            _parse_point(lines)
+            lines = []
+        else:
+            lines.append(line)
+        if idx / 3 >= options.limit:
             break
 
 if __name__ == "__main__":
