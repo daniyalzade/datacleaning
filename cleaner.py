@@ -63,6 +63,22 @@ def _interpolate(points, point_type, name, interval):
 def _convert_datetime(date_str):
     return datetime.datetime.striptime(date_str, DATE_TIME_FORMAT)
 
+def _get_point_type(point_type):
+    for type in TYPES:
+        if type in point_type:
+            return type
+    raise ValueError
+
+def _get_frequency(frequency):
+    """
+    @param frequency: str
+    @return: int
+
+    0:01:00 -> 1
+    0:05:00 > 5
+    """
+    return int(frequency.split(':')[1])
+
 def _parse_point(lines, start=None, end=None):
     """
     @param lines: list(str)
@@ -81,7 +97,10 @@ def _parse_point(lines, start=None, end=None):
     """
 
     first_line, dates, values = lines
+    first_line = map(lambda x:x.strip(), first_line.split(','))
     name, point_type, start_date, end_date, _, frequency, url = first_line
+    point_type = _get_point_type(point_type)
+    frequency = _get_frequency(frequency)
     dict_ = {
             'name': name,
             'point_type': point_type,
