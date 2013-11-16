@@ -1,5 +1,6 @@
 from datetime import datetime
 from datetime import timedelta
+import logging
 
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
@@ -136,13 +137,19 @@ def _should_ignore(point, exclude):
     @param exclude: list(str)
     @return: bool
     """
-    if _exclude_name(point[0]['name']):
+    name = point[0]['name']
+    point_type = point[0]['point_type']
+    frequency = point[0]['frequency']
+    if _exclude_name(name):
+        if options.debug: print ("ignoring due to name %s" % name)
         return True
-    if point[0]['point_type'] in exclude:
+    if point_type in exclude:
+        if options.debug: print ("ignoring due to type %s" % point_type)
         return True
     if not point[0]['frequency'] in [5, 10, 15]:
+        if options.debug: print ("ignoring due to frequency %s" % frequency)
         return True
-    if not any(map(lambda v: v in EXC_VALUES), point[2]):
+    if not any(map(lambda v: v in EXC_VALUES, point[2])):
         return True
     return False
 
@@ -175,6 +182,7 @@ def main():
             default='Total Real Power',
             )
     define('limit', type=int)
+    define('debug', type=bool)
 
     parse_command_line()
     end = _convert_datetime(options.end)
@@ -184,16 +192,15 @@ def main():
     lines = []
     points = []
     for idx, line in enumerate(foo.readlines()):
-        if len(lines) == 3:
-            point = _parse_point(lines)
-            if _should_ignore(point, options.exclude):
-                continue
-            lines = []
-            points.append(point)
-        else:
-            lines.append(line)
         if idx / 3 >= options.limit:
             break
+        lines.append(line)
+        if len(lines) == 3:
+            point = _parse_point(lines)
+            lines = []
+            if _should_ignore(point, options.exclude):
+                continue
+            points.append(point)
     print "number of points for analysis %s" % len(points)
 
     names = [p['name'] for p in points]
