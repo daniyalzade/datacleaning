@@ -180,7 +180,7 @@ def main():
     for idx, line in enumerate(foo.readlines()):
         if len(lines) == 3:
             point = _parse_point(lines)
-            if _should_ignore(point):
+            if _should_ignore(point, options.exclude):
                 continue
             lines = []
             points.append(point)
