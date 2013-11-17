@@ -325,7 +325,7 @@ def main():
         points = [_interpolate(p) for p in points]
     except NoPointFound:
         if options.debug:
-            print "No points found, try increase --lookback={int}"
+            print "No points found during the time specified, try increase --lookback={int}"
         return
     header = ','.join(['date'] + names)
     num_values = len(points[0][0])
