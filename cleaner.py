@@ -107,6 +107,15 @@ def _interpolate(point):
             new_values.append(predicted_value)
         return dict_, new_dates, new_values
 
+def _transformed_format(points, output_path):
+    """
+    @param points: list(Point)
+    @param output_path: str
+
+    write the transformed file to output_path
+    """
+    pass
+
 def _convert_datetime(date_str):
     try:
         return datetime.strptime(date_str, DATE_TIME_FORMAT)
