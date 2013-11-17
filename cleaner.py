@@ -50,9 +50,6 @@ class ShouldIngore(Exception):
         super(ShouldIngore, self).__init__()
         self.point_type = kwargs['point_type']
 
-class NoPointFound(Exception):
-    pass
-
 def _exclude_name(name):
     """
     @param name: str
@@ -68,14 +65,14 @@ def _truncate(point, start, end):
     @param point: Point
     @param start: datetime
     @param end: datetime
-    @return: Point
+    @return: Point | None
 
     return all the dates and values in between start, end
     """
     dict_, dates, values = point
     date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
     if not date_and_values:
-        raise NoPointFound
+        return None
     truncated_date, truncated_values = map(list, zip(*date_and_values))
     return dict_, truncated_date, truncated_values
 
@@ -276,6 +273,7 @@ def main():
     parse_command_line()
     end = _convert_datetime(options.end)
     start = end - timedelta(days=options.lookback)
+    print str(start)
     limit = options.limit
 
     file_to_read = open(options.path)
@@ -320,10 +318,9 @@ def main():
         end = max([p[0]['end'] for p in points])
         print "data recorded from %s to %s" % (start, end)
         return
-    try:
-        points = [_truncate(p, start, end) for p in points]
-        points = [_interpolate(p) for p in points]
-    except NoPointFound:
+    points = filter(None, [_truncate(p, start, end) for p in points])
+    points = [_interpolate(p) for p in points]
+    if not points:
         if options.debug:
             print "No points found during the time specified, try increase --lookback={int}"
         return
