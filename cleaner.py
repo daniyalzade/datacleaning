@@ -228,12 +228,13 @@ def main():
     parse_command_line()
     end = _convert_datetime(options.end)
     start = end - timedelta(days=options.lookback)
+    limit = options.limit
 
     file_to_read = open(options.path)
     lines = []
     points = []
     for idx, line in enumerate(file_to_read.readlines()):
-        if idx / 3 >= options.limit:
+        if limit and idx / 3 >= limit:
             break
         lines.append(line)
         if len(lines) == 3:
