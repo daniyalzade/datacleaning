@@ -102,7 +102,7 @@ def _interpolate(point):
                 new_dates.append(date)
                 new_values.append(value)
             previous_value = new_values[idx-1]
-            predicted_value = (previous_value * x[is_even] + value * x[is_even-1])/2.
+            predicted_value = (previous_value * x[is_even] + value * x[not is_even])/2.
             new_dates.append(date - timedelta(minutes=10))
             new_values.append(predicted_value)
         return dict_, new_dates, new_values
@@ -161,7 +161,8 @@ def _parse_point(lines, start=None, end=None):
     }
     """
     header, dates, values = _get_header_dates_and_values(lines)
-    name, point_type, start_date, end_date, _, frequency, url = header
+    name, point_type, start_date, end_date = header[:4]
+    frequency, url = header[-2:]
     point_type = _get_point_type(point_type)
     frequency = _get_frequency(frequency)
     dict_ = {
