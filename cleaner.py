@@ -11,11 +11,6 @@ OPITIMAL_FREQUENCY = 10
 
 PATTERN = re.compile(r'(?:\s*,\s*|\n)')
 
-FIRST_COLUMN = 'Total_Real_Power'
-"""
-str, this column should be the first while creating the output file
-"""
-
 TYPES = [
         'bool',
         'enum',
@@ -255,11 +250,27 @@ def _to_str(point):
             point['name'], point['start'], point['end'], point['frequency']
             )
 
+def _reorder_points(points):
+    """
+    @param points: list(Point)
+    @return: points
+    """
+    found_idx = 0
+    for idx, point in enumerate(points):
+        if point[0]['name'] == options.prediction_point:
+            found_idx = idx
+            break
+    if found_idx:
+        points = [points[found_idx]] + points[:found_idx] + points[found_idx+1:]
+    return points
+
 def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
             help='Full path to the file containing the csv',
             )
-    define('output', default='output.csv')
+    define('output', default='output.csv',
+            help='Name of the putput file to be created',
+            )
     define('end', default='2013-10-26',
             help='The last day to be used for the analysis',
             )
@@ -281,7 +292,7 @@ def main():
             help='display the first and last values recorded',
             )
     define('prediction_point',
-            default='Total Real Power',
+            default='Total_Real_Power',
             )
     define('limit', type=int)
     define('debug', type=bool)
@@ -318,7 +329,6 @@ def main():
             points.append(point)
     print "number of points for analysis %s" % len(points)
 
-    names = [p[0]['name'] for p in points]
     if options.display_point:
         for p in points:
             if p[0]['name'] == options.display_point:
@@ -339,15 +349,20 @@ def main():
         if options.debug:
             print "No points found during the time specified, try increase --lookback={int}"
         return
+    f = open(options.output, 'w')
+    points = _reorder_points(points)
+    names = [p[0]['name'] for p in points]
     header = ','.join(['date'] + names)
-    num_values = len(points[0][0])
+    if not options.debug: f.write(header + '\n')
     print header
+    num_values = len(points[0][1])
     for idx in range(num_values):
         ts = points[0][1][idx]
         row = [ts]
         for point in points:
             row.append(points[0][2][idx])
         msg = ','.join([str(r) for r in row])
+        if not options.debug: f.write(msg + '\n')
         print msg
 
 
