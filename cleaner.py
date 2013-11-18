@@ -9,6 +9,8 @@ SAMPLE_DATE = '2013-10-19 04:11:00'
 SAMPLE_HEADERS = '%24301_points_High_History/,{http://obix.org/ns/schema/1.0}real,2013-10-19 03:21:00,2013-10-25 03:21:00,8640,0:01:00,http://Callida:Callida123@38.100.73.133/obix/histories/Pennzoil_WebSup/%24301_points_High_History/~historyQuery?start=2013-01-01T00:00:00.000-23:59&end=2013-10-25T08:21:47.565-23:59'
 OPITIMAL_FREQUENCY = 10
 
+PATTERN = re.compile(r'(?:\s*,\s*|\n)')
+
 TYPES = [
         'bool',
         'enum',
@@ -115,11 +117,18 @@ def _transformed_format(points, output_path):
     """
     pass
 
+date_values = {}
 def _convert_datetime(date_str):
+    global date_values
+    cur_val = date_values.get(date_str)
+    if cur_val: return cur_val
+
     try:
-        return datetime.strptime(date_str, DATE_TIME_FORMAT)
+        val = datetime.strptime(date_str, DATE_TIME_FORMAT)
     except Exception:
-        return datetime.strptime(date_str, DATE_FORMAT)
+        val = datetime.strptime(date_str, DATE_FORMAT)
+    date_values[date_str] = val
+    return val
 
 def _get_point_type(point_type):
     for type in TYPES:
@@ -141,10 +150,11 @@ def _get_header_dates_and_values(lines):
     @param lines: list(str)
     @return: (dict(headers), list(datetime), list(float))
     """
-    headers, dates, values = map(lambda x: re.split(r'(?:\s*,\s*|\n)', x)[:-1],
+    headers, dates, values = map(lambda x: re.split(PATTERN, x)[:-1],
                                  lines)
     try:
-        values = map(float, values)
+        #values = map(float, values)
+        values = values
     except Exception:
         if options.debug:
             print ("ingoring due to wrong type: %s" % values[0])
@@ -280,10 +290,10 @@ def main():
     points = []
     num_lines = 26934
     for idx, line in enumerate(file_to_read):
-        if not idx % 1000:
-            print "processing line %s of %s" % (idx, num_lines)
         if limit and idx / 3 >= limit:
             break
+        if not idx % 1000:
+            print "processing line %s of %s" % (idx, num_lines)
         lines.append(line)
         if len(lines) == 3:
             try:
