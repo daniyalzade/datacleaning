@@ -46,7 +46,9 @@ EXC_NAMES = [
         ]
 
 class ShouldIngore(Exception):
-    pass
+    def __init__(self, *args, **kwargs):
+        super(ShouldIngore, self).__init__()
+        self.point_type = kwargs['point_type']
 
 class NoPointFound(Exception):
     pass
@@ -149,9 +151,34 @@ def _get_header_dates_and_values(lines):
     except Exception:
         if options.debug:
             print ("ingoring due to wrong type: %s" % values[0])
-        raise ShouldIngore
+        raise ShouldIngore(point_type=_get_point_type_helper(headers))
     dates = map(_convert_datetime, dates)
     return headers, dates, values
+
+def _get_point_type_helper(header):
+    """
+    @param header: list(str)
+    """
+    name, point_type, start_date, end_date = header[:4]
+    point_type = _get_point_type(point_type)
+    return point_type
+
+point_files = {}
+def _get_type_files(point_type):
+    global point_files
+    f = point_files.get(point_type)
+    f = f or open(options.output.replace('.csv', "_%s.csv" % point_type), 'w')
+    point_files[point_type] = f
+    return f
+
+def _record_excluded_types(lines, point_type):
+    """
+    @param lines: list(str)
+    @param point_type: str
+    """
+    f = _get_type_files(point_type)
+    for line in lines:
+        f.write(line)
 
 def _parse_point(lines, start=None, end=None):
     """
@@ -172,7 +199,7 @@ def _parse_point(lines, start=None, end=None):
     header, dates, values = _get_header_dates_and_values(lines)
     name, point_type, start_date, end_date = header[:4]
     frequency, url = header[-2:]
-    point_type = _get_point_type(point_type)
+    point_type = _get_point_type_helper(header)
     frequency = _get_frequency(frequency)
     dict_ = {
             'name': name,
@@ -204,6 +231,16 @@ def _should_ignore(point, exclude):
         if options.debug: print ("ignoring due to frequency %s" % frequency)
         return True
     return False
+
+def _to_str(point):
+    """
+    @param point: Point
+    @return: str
+    """
+    point = point[0]
+    return "%s, %s - %s, %s" % (
+            point['name'], point['start'], point['end'], point['frequency']
+            )
 
 def main():
     define('path', default='/Users/eytan/Downloads/whole_history_repo.csv',
@@ -244,16 +281,24 @@ def main():
     file_to_read = open(options.path)
     lines = []
     points = []
-    for idx, line in enumerate(file_to_read.readlines()):
+    num_lines = 26934
+    for idx, line in enumerate(file_to_read):
+        if not idx % 1000:
+            print "processing line %s of %s" % (idx, num_lines)
         if limit and idx / 3 >= limit:
             break
         lines.append(line)
         if len(lines) == 3:
             try:
                 point = _parse_point(lines)
-            except ShouldIngore:
+            except ShouldIngore as e:
+                _record_excluded_types(lines, e.point_type)
                 continue
             finally:
+                if point:
+                    point_type = point[0]['point_type']
+                    if point_type in options.exclude:
+                        _record_excluded_types(lines, point_type)
                 lines = []
             if _should_ignore(point, options.exclude):
                 continue
@@ -268,7 +313,7 @@ def main():
         return
     if options.display_points:
         import pprint
-        pprint.pprint(names)
+        pprint.pprint([_to_str(p) for p in points])
         return
     if options.display_date_range:
         start = min([p[0]['start'] for p in points])
