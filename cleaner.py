@@ -1,13 +1,11 @@
 import re
 from datetime import datetime
 from datetime import timedelta
-import logging
 
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
 SAMPLE_DATE = '2013-10-19 04:11:00'
 SAMPLE_HEADERS = '%24301_points_High_History/,{http://obix.org/ns/schema/1.0}real,2013-10-19 03:21:00,2013-10-25 03:21:00,8640,0:01:00,http://Callida:Callida123@38.100.73.133/obix/histories/Pennzoil_WebSup/%24301_points_High_History/~historyQuery?start=2013-01-01T00:00:00.000-23:59&end=2013-10-25T08:21:47.565-23:59'
-OPITIMAL_FREQUENCY = 10
 
 PATTERN = re.compile(r'(?:\s*,\s*|\n)')
 
@@ -62,21 +60,40 @@ def _exclude_name(name):
             return exc
     return False
 
-def _truncate(point, start, end):
+def _get_nones(mins, frequency, start):
+    num = mins / frequency
+    dates = [start + timedelta(minutes=frequency * n)  for n in range(num)]
+    vals = [None] * num
+    return dates, vals
+
+def _truncate(point, start, end, frequency=10):
     """
     @param point: Point
     @param start: datetime
     @param end: datetime
     @return: Point | None
-
-    return all the dates and values in between start, end
     """
     dict_, dates, values = point
+    start_time_of_point = dict_.get('start')
+    end_time_of_point = dict_.get('end')
+    if start >= end_time_of_point:
+        return None
+
+    def _truncate_helper(date_and_values):
+        ds, vs = map(list, zip(*date_and_values))
+        mins_to_fill_front = (start_time_of_point - start).seconds / 60
+        mins_to_fill_back = (end - end_time_of_point).seconds / 60
+        d_front, v_front = _get_nones(mins_to_fill_front, frequency, start)
+        d_back, v_back = _get_nones(mins_to_fill_back, frequency, end_time_of_point)
+        vs = v_front + vs + v_back
+        ds = d_front + ds + d_back
+        return ds, vs
+
     date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
     if not date_and_values:
         return None
-    truncated_date, truncated_values = map(list, zip(*date_and_values))
-    return dict_, truncated_date, truncated_values
+    truncated_dates, truncated_values = _truncate_helper(date_and_values)
+    return dict_, truncated_dates, truncated_values
 
 def _interpolate(point):
     """
@@ -299,7 +316,8 @@ def main():
 
     parse_command_line()
     end = _convert_datetime(options.end)
-    start = end - timedelta(days=options.lookback)
+    lookback = options.lookback
+    start = end - timedelta(days=lookback)
     limit = options.limit
 
     file_to_read = open(options.path)
@@ -368,7 +386,7 @@ def main():
         ts = points[0][1][idx]
         row = [ts]
         for point in points:
-            row.append(points[0][2][idx])
+            row.append(point[2][idx])
         msg = ','.join([str(r) for r in row])
         if not options.debug: f.write(msg + '\n')
         print msg
