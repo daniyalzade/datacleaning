@@ -172,7 +172,6 @@ def _get_point_type_helper(header):
     @param header: list(str)
     """
     name, point_type, start_date, end_date = header[:4]
-    name = name.replace('/', '')
     point_type = _get_point_type(point_type)
     return point_type
 
@@ -211,6 +210,7 @@ def _parse_point(lines, start=None, end=None):
     """
     header, dates, values = _get_header_dates_and_values(lines)
     name, point_type, start_date, end_date = header[:4]
+    name = name.replace('/', '')
     frequency, url = header[-2:]
     point_type = _get_point_type_helper(header)
     frequency = _get_frequency(frequency)
