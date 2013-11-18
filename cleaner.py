@@ -273,7 +273,6 @@ def main():
     parse_command_line()
     end = _convert_datetime(options.end)
     start = end - timedelta(days=options.lookback)
-    print str(start)
     limit = options.limit
 
     file_to_read = open(options.path)
