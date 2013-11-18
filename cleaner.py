@@ -61,12 +61,6 @@ def _exclude_name(name):
             return exc
     return False
 
-def _get_nones(mins, frequency, start):
-    num = mins / frequency
-    dates = [start + timedelta(minutes=frequency * n)  for n in range(num)]
-    vals = [None] * num
-    return dates, vals
-
 def _elapsed_seconds(delta):
     """
     Convert a timedelta to total elapsed seconds (as a float).
@@ -134,7 +128,7 @@ def _interpolate(point):
     elif frequency == 15:
         #0,   15,   30,  45, (timestamps we have)
         #  10,   20,  40,    (timesamps to predict)
-        new_dates, new_values = dates[0], values[0]
+        new_dates, new_values = [dates[0]], [values[0]]
         x = [1/3., 2/3.]
         for idx, (date, value) in enumerate(zip(dates, values)[1:], 1):
             is_even = idx % 2 == 0
@@ -142,19 +136,11 @@ def _interpolate(point):
                 new_dates.append(date)
                 new_values.append(value)
             previous_value = new_values[idx-1]
-            predicted_value = (previous_value * x[is_even] + value * x[not is_even])/2.
+            predicted_value = ((previous_value * x[is_even] + value * x[not is_even])/2.
+                               if previous_value else None)
             new_dates.append(date - timedelta(minutes=10))
             new_values.append(predicted_value)
         return dict_, new_dates, new_values
-
-def _transformed_format(points, output_path):
-    """
-    @param points: list(Point)
-    @param output_path: str
-
-    write the transformed file to output_path
-    """
-    pass
 
 date_values = {}
 def _convert_datetime(date_str):
