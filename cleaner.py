@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 from datetime import timedelta
+import time
 
 DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 DATE_FORMAT = '%Y-%m-%d'
@@ -65,6 +66,27 @@ def _get_nones(mins, frequency, start):
     dates = [start + timedelta(minutes=frequency * n)  for n in range(num)]
     vals = [None] * num
     return dates, vals
+
+def _elapsed_seconds(delta):
+    """
+    Convert a timedelta to total elapsed seconds (as a float).
+    @return: int
+    """
+    seconds = (24*60*60) * delta.days + delta.seconds + float(delta.microseconds) / 10**6
+    return int(seconds)
+
+def _align(frequency, ts):
+    """
+    @param frequency: timedelta
+    @param ts: datetime
+    @return aligned_ts: datetime
+    """
+    # There is a timezone issue with align to day. We should fix this!
+
+    epoch = datetime(*time.gmtime(0)[:6])
+    delta_sec = _elapsed_seconds(ts - epoch)
+    offset = delta_sec % _elapsed_seconds(frequency)
+    return ts - timedelta(seconds=offset)
 
 def _truncate(point, start, end, frequency=10):
     """
