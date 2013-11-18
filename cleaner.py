@@ -11,6 +11,11 @@ OPITIMAL_FREQUENCY = 10
 
 PATTERN = re.compile(r'(?:\s*,\s*|\n)')
 
+FIRST_COLUMN = 'Total_Real_Power'
+"""
+str, this column should be the first while creating the output file
+"""
+
 TYPES = [
         'bool',
         'enum',
@@ -167,6 +172,7 @@ def _get_point_type_helper(header):
     @param header: list(str)
     """
     name, point_type, start_date, end_date = header[:4]
+    name = name.replace('/', '')
     point_type = _get_point_type(point_type)
     return point_type
 
