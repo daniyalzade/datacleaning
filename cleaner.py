@@ -61,6 +61,12 @@ def _exclude_name(name):
             return exc
     return False
 
+def _get_nones(mins, frequency, start):
+    num = mins / frequency
+    dates = [start + timedelta(minutes=frequency * n)  for n in range(num)]
+    vals = [None] * num
+    return dates, vals
+
 def _elapsed_seconds(delta):
     """
     Convert a timedelta to total elapsed seconds (as a float).
@@ -82,7 +88,7 @@ def _align(frequency, ts):
     offset = delta_sec % _elapsed_seconds(frequency)
     return ts - timedelta(seconds=offset)
 
-def _truncate(point, start, end, frequency=10):
+def _truncate(point, start, end):
     """
     @param point: Point
     @param start: datetime
@@ -102,7 +108,7 @@ def _truncate(point, start, end, frequency=10):
         while cur <= end:
             truncated_dates.append(cur)
             truncated_values.append(date_value_dict.get(cur))
-            cur += timedelta(minutes=10)
+            cur += timedelta(minutes=point[0]['frequency'])
         return truncated_dates, truncated_values
 
     date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
@@ -136,11 +142,22 @@ def _interpolate(point):
                 new_dates.append(date)
                 new_values.append(value)
             previous_value = new_values[idx-1]
-            predicted_value = ((previous_value * x[is_even] + value * x[not is_even])/2.
-                               if previous_value else None)
+            if previous_value and value:
+                predicted_value = (previous_value * x[is_even] + value * x[not is_even])/2.
+            else:
+                predicted_value = previous_value or value
             new_dates.append(date - timedelta(minutes=10))
             new_values.append(predicted_value)
         return dict_, new_dates, new_values
+
+def _transformed_format(points, output_path):
+    """
+    @param points: list(Point)
+    @param output_path: str
+
+    write the transformed file to output_path
+    """
+    pass
 
 date_values = {}
 def _convert_datetime(date_str):
@@ -310,6 +327,9 @@ def main():
     define('display_points', type=bool,
             help='display the list of points in the data',
             )
+    define('index_of_point',
+            help='display the index of a particular point',
+            )
     define('display_point', type=str,
             help='display data about this particular point',
             )
@@ -320,6 +340,7 @@ def main():
             default='Total_Real_Power',
             )
     define('limit', type=int)
+    define('start_idx', type=int)
     define('debug', type=bool)
 
     parse_command_line()
@@ -332,8 +353,15 @@ def main():
     lines = []
     points = []
     num_lines = 26934
+    if options.index_of_point:
+        for idx, line in enumerate(file_to_read):
+            if options.index_of_point in line:
+                print idx
+                return
     for idx, line in enumerate(file_to_read):
-        if limit and idx / 3 >= limit:
+        if options.start_idx and idx < options.start_idx:
+            continue
+        if limit and (idx - options.start_idx) / 3 >= limit:
             break
         if not idx % 1000:
             print "processing line %s of %s" % (idx, num_lines)
@@ -388,7 +416,7 @@ def main():
     names = [p[0]['name'] for p in points]
     header = ','.join(['date'] + names)
     if not options.debug: f.write(header + '\n')
-    print header
+    if options.debug: print header
     num_values = len(points[0][1])
     for idx in range(num_values):
         ts = points[0][1][idx]
@@ -397,7 +425,7 @@ def main():
             row.append(point[2][idx])
         msg = ','.join([str(r) for r in row])
         if not options.debug: f.write(msg + '\n')
-        print msg
+        if options.debug: print msg
 
 
 if __name__ == "__main__":
