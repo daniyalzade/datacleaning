@@ -329,6 +329,14 @@ def main():
             points.append(point)
     print "number of points for analysis %s" % len(points)
 
+    #report = []
+    #for point in points:
+    #    if point[0]['start'] > datetime(2013, 9, 9):
+    #        report.append(point)
+    #import pprint
+    #pprint.pprint([_to_str(p) for p in report])
+    #return
+
     if options.display_point:
         for p in points:
             if p[0]['name'] == options.display_point:
