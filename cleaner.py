@@ -54,11 +54,11 @@ class NoPointFound(Exception):
 def _exclude_name(name):
     """
     @param name: str
-    @return: bool
+    @return: str, the keyword that causes exclusion
     """
     for exc in EXC_NAMES:
-        if exc.lower() in name:
-            return True
+        if exc in name:
+            return exc
     return False
 
 def _truncate(point, start, end):
@@ -193,8 +193,9 @@ def _should_ignore(point, exclude):
     name = point[0]['name']
     point_type = point[0]['point_type']
     frequency = point[0]['frequency']
-    if _exclude_name(name):
-        if options.debug: print ("ignoring due to name %s" % name)
+    exc = _exclude_name(name)
+    if exc:
+        if options.debug: print ("ignoring due to name %s, exc %s" % (name, exc))
         return True
     if point_type in exclude:
         if options.debug: print ("ignoring due to type %s" % point_type)
