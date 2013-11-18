@@ -96,20 +96,20 @@ def _truncate(point, start, end, frequency=10):
     @return: Point | None
     """
     dict_, dates, values = point
-    start_time_of_point = dict_.get('start')
     end_time_of_point = dict_.get('end')
     if start >= end_time_of_point:
         return None
 
     def _truncate_helper(date_and_values):
-        ds, vs = map(list, zip(*date_and_values))
-        mins_to_fill_front = (start_time_of_point - start).seconds / 60
-        mins_to_fill_back = (end - end_time_of_point).seconds / 60
-        d_front, v_front = _get_nones(mins_to_fill_front, frequency, start)
-        d_back, v_back = _get_nones(mins_to_fill_back, frequency, end_time_of_point)
-        vs = v_front + vs + v_back
-        ds = d_front + ds + d_back
-        return ds, vs
+        truncated_dates = []
+        truncated_values = []
+        date_value_dict = dict(date_and_values)
+        cur = start
+        while cur <= end:
+            truncated_dates.append(cur)
+            truncated_values.append(date_value_dict.get(cur))
+            cur += timedelta(minutes=10)
+        return truncated_dates, truncated_values
 
     date_and_values = [(d, v) for d, v in zip(dates, values) if start < d < end]
     if not date_and_values:
@@ -166,7 +166,7 @@ def _convert_datetime(date_str):
         val = datetime.strptime(date_str, DATE_TIME_FORMAT)
     except Exception:
         val = datetime.strptime(date_str, DATE_FORMAT)
-    date_values[date_str] = val
+    date_values[date_str] = _align(timedelta(minutes=10), val)
     return val
 
 def _get_point_type(point_type):
