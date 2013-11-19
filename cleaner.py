@@ -192,8 +192,8 @@ def _get_header_dates_and_values(lines):
     @param lines: list(str)
     @return: (dict(headers), list(datetime), list(float))
     """
-    headers, dates, values = map(lambda x: re.split(PATTERN, x)[:-1],
-                                 lines)
+    lines = map(lambda x: x.split(','), lines)
+    headers, dates, values = [map(lambda x: x.strip(), l) for l in lines]
     try:
         #values = map(float, values)
         values = values
